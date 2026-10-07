@@ -129,7 +129,7 @@ _Built in: M1 (check script) and M2 (rule files)_
 
 TypeScript strictest, named exports only, `import type`, no `any`/`!`/enums; React function
 components with `ref` as a prop and React Compiler on; token utilities only for styling
-(`bg-surface`, `h-control-md`), no hex and no `dark:`; Rust edition 2024, no `unsafe`/`unwrap`/`expect`,
+(`bg-surface`, `h-control-md`), no hex and no `dark:`; Rust edition 2024, no `unwrap`/`expect`, `unsafe` only in the isolated `platform/` module (§13.2),
 `thiserror` errors, `tracing` logs; Conventional Commits with project-id scopes; generated files
 never hand-edited.
 
@@ -286,16 +286,18 @@ dependencies are done. Docs are written inside the milestone whose behavior they
 
 | # | Milestone | Depends on | Delivers |
 |---|---|---|---|
-| **M0** | **Research and version resolution** | — | Resolve the latest stable of every tool and dependency (npm, crates.io, bun, Rust, Tauri); verify the §12 items (`.config/` support, PortableApps.com and portapps.io formats, Antigravity conventions, Tauri transparent-popup and WebView2 specifics); record findings and any dependency exceptions. Output: the pinned catalog and updates to this spec. |
-| **M1** | **Monorepo foundation** | M0 | Fix skeleton typos (§3); root `package.json` / `Cargo.toml` / `turbo.json` / `bunfig.toml` / toolchain; move configs into `.config/`; `scripts/` framework and the commands that can already work (`setup`, `check`, `format`, `test`, `clean`, `version`, `deps`, `attribution`); test conventions (§5) with the no-test-code-in-`src` check; `crates/testing` fixtures; naming/structure check; lefthook + commitlint; **baseline CI** running `check` + `test` on Windows. |
-| **M2** | **Agent rules and tooling** | M1 | `.claude/rules` (naming, tests, TypeScript, Rust, attribution, design-system contract), `AGENTS.md` / `CLAUDE.md` indexes, hooks (format-on-edit, guard-generated, session-start), agents and skills, `bun run agents:sync` with drift check, `.agents/` and `.cursor/`. Done this early so all later work follows the rules. |
+| **M0** | **Research and version resolution** | — | Resolve the latest stable of every tool and dependency (npm, crates.io, bun, Rust, Tauri); verify the §12 items (`.config/` support, PortableApps.com and portapps.io formats, Antigravity conventions, Tauri transparent-popup and WebView2 specifics); record findings and any dependency exceptions. Also decide: IPC type generation (tauri-specta or ts-rs), release-age cooldown support, and the performance targets (§13.3). Output: the pinned catalog and updates to this spec. |
+| **M1** | **Monorepo foundation** | M0 | Fix skeleton typos (§3); root `package.json` / `Cargo.toml` / `turbo.json` / `bunfig.toml` / toolchain; move configs into `.config/`; `scripts/` framework and the commands that can already work (`setup`, `check`, `format`, `test`, `clean`, `version`, `deps`, `attribution`); test conventions (§5) with the no-test-code-in-`src` check; `crates/testing` fixtures; naming/structure check; workspace lints and strict compiler options from §13.1; security tooling from §13.2 (cargo-deny, dependency audit, secret scan, CI SHA-pinning); lefthook + commitlint; **baseline CI** running `check` + `test` on Windows. |
+| **M2** | **Agent rules and tooling** | M1 | `.claude/rules` (naming, tests, TypeScript, Rust, security, performance, Tauri, attribution, design-system contract — encoding all of §13), `AGENTS.md` / `CLAUDE.md` indexes, hooks (format-on-edit, guard-generated, session-start), agents and skills, `bun run agents:sync` with drift check, `.agents/` and `.cursor/`. Done this early so all later work follows the rules. |
 | **M3** | **Tokens and TS/Vite config** | M1 | `packages/tokens` (tokens, Polar Night + Snow Storm themes, contrast validator, generator), generated CSS/Tailwind/TS/JSON, `crates/design-tokens`, drift check; `config-typescript`, `config-vite`. |
 | **M4** | **Design system + example webapp** (parallel with M5) | M2, M3 | (a) `programs/webapp/example` shell first: Vite dev server, sidebar, Ctrl+K search, theme toggle, page chrome, `bun run example`. (b) Design system foundations. (c) Components in waves, each with its kit page and unit tests, visual QA in both themes per wave: window/layout/actions → inputs → overlays and menus → navigation/display/feedback. |
 | **M5** | **Rust core** (parallel with M4) | M1 | `genslate-paths` (all modes unit-tested via injected environment), then `launcher-core` in dependency order: `config` → `catalog` (with `icons`) → `library` → `launch` → `platform` traits. Reserved trait seams for installer, vault and eject. |
 | **M6** | **IPC contract and bridge** | M3, M5 | Typed IPC command/event contract (core ↔ UI), `packages/tauri-bridge` client, and the browser mock that implements the same interface. |
 | **M7** | **Tauri shell** | M5, M6 | `src-tauri`: window, tray, hotkey, autostart, `launcher-icon://`, commands delegating to core, WebView2 cache path. After this, `bun run dev` opens the real launcher against the mock `installDir`. |
 | **M8** | **Launcher UI** | M4, M6 (and M7 for native QA) | Features in order: `frame` → `apps` (source tabs, grouped/searchable list, context menu) → `command-bar` → `rail` (documents) → `status` → `settings` (writes `settings.toml`) → `tools` (expand view; installer, vault and eject appear as "coming soon" entry points). Developed first against the browser mock, then QA'd natively. |
-| **M9** | **Packaging, CI, release hardening** | M7, M8 | `bun run package` (staged `installDir` zip, archive rotation), full CI matrix and release workflow, manual QA checklist, `other/launcher/documents/`, final code and security review. |
+| **M9** | **Packaging, CI, release hardening** | M7, M8 | `bun run package` (staged `installDir` zip, archive rotation), full CI matrix and release workflow, manual QA checklist, `other/launcher/documents/`, code-signing if a certificate is available, final code and security review, threat-model doc. |
+
+**Every milestone ends with the exit gate in §13.5** (check + test green, security review, performance targets, docs).
 
 **Parallelism:** M4 and M5 are independent and can run side by side. M2 can overlap the end of M1.
 **Command availability:** `dev` works from M7, `package` from M9; earlier milestones only claim the commands
@@ -308,3 +310,92 @@ they can actually run.
 - PortableApps.com `appinfo.ini` and launcher env-var conventions; portapps.io layout.
 - Antigravity workspace folder conventions.
 - Tauri 2 specifics for a transparent popup + expand behavior on Windows, and WebView2 data-folder control.
+
+## 13. Engineering standards (apply to every milestone)
+
+_Built in: encoded as rules in M2, enforced by tooling from M1, checked at every milestone exit gate_
+
+Security and performance are **first-class requirements, not polish**. Where a standard can be enforced
+by a tool (lint, compiler flag, CI check) it is; the rest is written into `.claude/rules/` and reviewed
+by the `code-reviewer` and `security-reviewer` agents at each milestone exit. Specific tools and flags
+below are confirmed against current docs in M0.
+
+### 13.1 Modern syntax and methods
+
+- **TypeScript (latest stable):** strictest compiler options (`strict`, `noUncheckedIndexedAccess`,
+  `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `noImplicitOverride`), ESM only, `satisfies`,
+  `as const`, discriminated unions, `import type`; no `any`, non-null `!`, enums, default exports or
+  CommonJS. Modern built-ins preferred (`toSorted`, `structuredClone`, `Object.groupBy`, `using` where supported).
+- **React 19:** `ref` as a prop, `use`, Actions/`useTransition`, Suspense and error boundaries, React
+  Compiler on; no `forwardRef`, no `useEffect` for derived state or data fetching, no reflexive `useMemo`.
+- **CSS:** Tailwind v4 CSS-first config; native CSS (`@layer`, container queries, `color-mix`, `:has`)
+  over JS where possible; token utilities only.
+- **Rust (latest stable, edition 2024):** let-chains, `let … else`, async fn in traits, `LazyLock` /
+  `OnceLock`, `std` over third-party crates where equivalent. Workspace `[workspace.lints]` with clippy
+  `pedantic` (selected `nursery`) and `unwrap_used`, `expect_used`, `panic`, `todo`, `dbg_macro` denied.
+- **Bun:** `bun run`, `bun test`, `bun x`; Bun APIs for scripts (`Bun.file`, `Bun.$`) instead of Node shims.
+
+### 13.2 Security (priority)
+
+- **Tauri hardening:** per-window least-privilege capabilities with no wildcard permissions; strict CSP
+  (no `unsafe-inline`, no `unsafe-eval`); no remote content or navigation; `withGlobalTauri` off; no
+  `dangerous*` flags; scoped asset protocol; single-instance plugin; custom protocols
+  (`launcher-icon://`) sanitize every path; no shell/opener scopes wider than needed.
+- **IPC is the trust boundary.** Every command validates every argument in Rust. The UI sends **app ids,
+  never raw paths or commands**; Rust resolves the id to an executable the scanner found under
+  `programs/`. Processes are spawned with argument arrays, never through a shell.
+- **Path safety:** canonicalize and verify every path stays inside `<install>` (traversal, symlinks and
+  junctions, UNC paths, 8.3 names, reserved device names, alternate data streams). Config files have
+  size limits and unknown keys are rejected.
+- **`unsafe`:** `#![forbid(unsafe_code)]` everywhere except an isolated `platform/` module for Windows
+  FFI, which prefers the safe wrappers in the `windows` crate; any `unsafe` carries a `// SAFETY:`
+  comment and is reviewed explicitly.
+- **Supply chain:** exact pins, committed lockfiles, `bun install --frozen-lockfile` in CI, cargo-deny
+  (advisories, licenses, bans, sources), dependency audit in `check`, a release-age cooldown on new
+  versions if the tool supports it (balances the latest-versions policy), CI actions pinned by commit SHA,
+  least-privilege workflow tokens, secret scanning in hooks and CI.
+- **Constraints on later specs:** the installer uses HTTPS only, hash/signature verification and
+  extraction path validation (no zip-slip); the vault uses audited crypto crates with zeroized key
+  material and no home-grown cryptography; eject/cleanup never deletes outside `<install>` or app-owned
+  host traces.
+- **Release:** sign the executable if a certificate is available (M9); a written threat model lives in
+  `other/launcher/documents/security.md`.
+
+### 13.3 Performance (priority)
+
+- **Targets recorded and tracked** (numbers set in M0, measured from M7 on): hotkey-to-visible, cold start to
+  interactive, idle memory, and UI bundle size. Bundle-size budgets are checked in CI.
+- **Popup feels instant:** the webview is preloaded and kept warm while hidden; non-critical features
+  (settings, tools) are lazy-loaded; long lists are virtualized; animations touch only `transform` and
+  `opacity`; self-hosted variable fonts only.
+- **Removable-drive reality:** USB sticks have slow I/O and limited write endurance. Scans run off the
+  main thread with bounded concurrency, are incremental and cached by mtime fingerprint, and file watching
+  is debounced. Writes are **atomic (temp file + rename)**, batched and debounced, so an unplug can't
+  corrupt state and flash wear stays low. IPC calls never block; large results stream as events.
+- **Build:** Rust release profile tuned (LTO, `codegen-units = 1`, `strip`), Turborepo caching with exact
+  `inputs`, minimal dependencies.
+
+### 13.4 Proper practices by area
+
+- **Repo:** Conventional Commits, `.changes` changelog entries, semver, protected `main`, CODEOWNERS and PR
+  templates, LF line endings via `.gitattributes`, no generated or secret files committed, every rule
+  enforced by the check script.
+- **Rust:** `thiserror` in libraries (`anyhow` only in binaries), `tracing` structured logs, no global
+  mutable state, dependency injection through traits, small public APIs, deterministic and testable
+  logic, `cargo nextest` as the runner, coverage via a tool in `.config/`.
+- **Front end:** accessibility (WCAG 2.2 AA) as a gate, error boundaries, minimal state with Rust as the
+  source of truth (a small store such as `useSyncExternalStore`, no heavy state library unless M0 shows a
+  need), no direct network calls from the UI.
+- **Tauri shell:** thin, async commands, shared state behind `State<Arc<…>>`, events for push updates, a
+  panic hook that logs, graceful shutdown that terminates tracked processes only when asked.
+- **Backend (`launcher-core`):** ports-and-adapters (traits at the Windows and filesystem edges), pure
+  logic in the core, structured typed errors, cancellation for long tasks, atomic file writes.
+- **IPC types:** generated from Rust so the contract has one source of truth (tauri-specta or ts-rs,
+  chosen in M0), plus a drift check in `bun run check`.
+
+### 13.5 Milestone exit gate
+
+A milestone is done only when: `bun run check` and `bun run test` are green; its security checklist
+(§13.2) is reviewed by the `security-reviewer`; any performance target it touches is measured and
+within budget; docs for its behavior are written; and nothing in the milestone breaks the naming (§4)
+or test (§5) rules.
