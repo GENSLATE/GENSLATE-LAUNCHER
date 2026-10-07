@@ -53,6 +53,8 @@ this plan.
 
 ## 3. Monorepo
 
+_Built in: M1 (verified first in M0)_
+
 ```
 programs/
   desktop/launcher/        Tauri app: src/ (React UI), src-tauri/ (shell), tests/{unit,e2e}/,
@@ -110,6 +112,8 @@ Existing typos to correct: `premissions/` (→ `permissions/`), `tauri.config.js
 
 ## 4. Naming and structure rules
 
+_Built in: M1 (check script) and M2 (rule files)_
+
 1. **Folders by domain, then role**, e.g. `features/apps/{components,hooks,state,lib}/`; role
    subfolders from the first file so layouts never need reorganizing.
 2. **Files `<subject>.<kind>.<ext>`**, kebab-case: `app-row.component.tsx`, `use-launcher.hook.ts`,
@@ -131,6 +135,8 @@ never hand-edited.
 
 ## 5. Tests
 
+_Built in: M1 (conventions, fixtures, check script); applied in every later milestone_
+
 - Every app, package and crate owns `tests/unit/` and `tests/e2e/`. **No test code in `src/`:** no
   `#[cfg(test)]` modules and no `*.test.ts(x)` beside source.
 - **TypeScript:** bun test + Testing Library + happy-dom in `tests/unit/` (mirroring the `src/` tree);
@@ -145,6 +151,8 @@ never hand-edited.
   automated reliably: it gets a manual QA checklist in `other/launcher/documents/`.
 
 ## 6. Portable runtime layout (`genslate-paths`)
+
+_Built in: M5 (`paths`, `config`); the window cache path in M7_
 
 ```
 <install>/                      any folder, any drive letter
@@ -177,6 +185,8 @@ preserving comments and formatting. Updates never overwrite it; the package ship
 file is created on first run if missing.
 
 ## 7. Launcher architecture
+
+_Built in: M5 (core), M6 (IPC contract), M7 (shell), M8 (UI)_
 
 ### `crates/launcher-core` (no Tauri dependency)
 
@@ -211,6 +221,8 @@ is the only fatal error (error screen); the UI maps IPC errors to toasts or inli
 
 ## 8. Tokens, design system, example webapp
 
+_Built in: M3 (tokens) and M4 (design system + example webapp)_
+
 **Tokens.** `packages/tokens/src/{tokens,themes}/` is the single source: color, layout, typography,
 motion, cursor tokens; themes `nord.polar-night` (dark) and `nord.snow-storm` (light). `bun run tokens`
 generates CSS variables, Tailwind `@theme inline`, TS, JSON and Rust (`crates/design-tokens`).
@@ -240,6 +252,8 @@ component. It is also the visual-QA target.
 
 ## 9. Agent folders
 
+_Built in: M2 (early, so later work follows the rules)_
+
 Rules are authored once in `.claude/rules/*.md`; `bun run agents:sync` generates `.agents/rules/` and
 `.cursor/rules/*.mdc`; `bun run check` fails on divergence. Tool-specific content:
 
@@ -254,6 +268,8 @@ The exact Antigravity folder conventions are verified against its docs at planni
 
 ## 10. Quality, release, CI
 
+_Built in: M1 (quality gate, baseline CI) and M9 (package, release, full CI)_
+
 - **`bun run check` (via Turborepo):** Biome, tsc, cspell, knip, naming/structure check, token drift,
   agent-sync drift, dependency-exception check, attribution check, `cargo fmt --check`, clippy with
   warnings denied, cargo-deny. Lefthook runs the fast subset on commit; commitlint enforces Conventional
@@ -263,18 +279,29 @@ The exact Antigravity folder conventions are verified against its docs at planni
   template, empty `programs/` and `storage/` tree), zips it to `release/launcher/`, and rotates old
   builds into `release/.archive/`. `bun run version` bumps every manifest at once.
 
-## 11. Phase 1 build order
+## 11. Phase 1 build order (authoritative)
 
-1. Monorepo foundation (Turborepo, bun, `.config/`, scripts, typo fixes, tooling).
-2. Tokens, themes, generator.
-3. Design system foundations, then components in waves.
-4. Example webapp built alongside as component kit pages.
-5. `paths` and `launcher-core` (config, catalog, launch, library).
-6. Tauri shell and launcher UI.
-7. `.claude/`, `.agents/`, `.cursor/` setup and docs.
-8. Packaging and CI.
+Each section above is tagged with the milestone that builds it. A milestone starts only when its
+dependencies are done. Docs are written inside the milestone whose behavior they describe, not at the end.
 
-## 12. Open items to verify during planning
+| # | Milestone | Depends on | Delivers |
+|---|---|---|---|
+| **M0** | **Research and version resolution** | — | Resolve the latest stable of every tool and dependency (npm, crates.io, bun, Rust, Tauri); verify the §12 items (`.config/` support, PortableApps.com and portapps.io formats, Antigravity conventions, Tauri transparent-popup and WebView2 specifics); record findings and any dependency exceptions. Output: the pinned catalog and updates to this spec. |
+| **M1** | **Monorepo foundation** | M0 | Fix skeleton typos (§3); root `package.json` / `Cargo.toml` / `turbo.json` / `bunfig.toml` / toolchain; move configs into `.config/`; `scripts/` framework and the commands that can already work (`setup`, `check`, `format`, `test`, `clean`, `version`, `deps`, `attribution`); test conventions (§5) with the no-test-code-in-`src` check; `crates/testing` fixtures; naming/structure check; lefthook + commitlint; **baseline CI** running `check` + `test` on Windows. |
+| **M2** | **Agent rules and tooling** | M1 | `.claude/rules` (naming, tests, TypeScript, Rust, attribution, design-system contract), `AGENTS.md` / `CLAUDE.md` indexes, hooks (format-on-edit, guard-generated, session-start), agents and skills, `bun run agents:sync` with drift check, `.agents/` and `.cursor/`. Done this early so all later work follows the rules. |
+| **M3** | **Tokens and TS/Vite config** | M1 | `packages/tokens` (tokens, Polar Night + Snow Storm themes, contrast validator, generator), generated CSS/Tailwind/TS/JSON, `crates/design-tokens`, drift check; `config-typescript`, `config-vite`. |
+| **M4** | **Design system + example webapp** (parallel with M5) | M2, M3 | (a) `programs/webapp/example` shell first: Vite dev server, sidebar, Ctrl+K search, theme toggle, page chrome, `bun run example`. (b) Design system foundations. (c) Components in waves, each with its kit page and unit tests, visual QA in both themes per wave: window/layout/actions → inputs → overlays and menus → navigation/display/feedback. |
+| **M5** | **Rust core** (parallel with M4) | M1 | `genslate-paths` (all modes unit-tested via injected environment), then `launcher-core` in dependency order: `config` → `catalog` (with `icons`) → `library` → `launch` → `platform` traits. Reserved trait seams for installer, vault and eject. |
+| **M6** | **IPC contract and bridge** | M3, M5 | Typed IPC command/event contract (core ↔ UI), `packages/tauri-bridge` client, and the browser mock that implements the same interface. |
+| **M7** | **Tauri shell** | M5, M6 | `src-tauri`: window, tray, hotkey, autostart, `launcher-icon://`, commands delegating to core, WebView2 cache path. After this, `bun run dev` opens the real launcher against the mock `installDir`. |
+| **M8** | **Launcher UI** | M4, M6 (and M7 for native QA) | Features in order: `frame` → `apps` (source tabs, grouped/searchable list, context menu) → `command-bar` → `rail` (documents) → `status` → `settings` (writes `settings.toml`) → `tools` (expand view; installer, vault and eject appear as "coming soon" entry points). Developed first against the browser mock, then QA'd natively. |
+| **M9** | **Packaging, CI, release hardening** | M7, M8 | `bun run package` (staged `installDir` zip, archive rotation), full CI matrix and release workflow, manual QA checklist, `other/launcher/documents/`, final code and security review. |
+
+**Parallelism:** M4 and M5 are independent and can run side by side. M2 can overlap the end of M1.
+**Command availability:** `dev` works from M7, `package` from M9; earlier milestones only claim the commands
+they can actually run.
+
+## 12. Verification list (executed in M0)
 
 - Latest stable versions of all tools and dependencies.
 - Tool support for `.config/` (Turborepo, rustfmt, Cargo, lefthook).
